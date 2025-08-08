@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  bufferbloat-tester:
+    build: .
+    container_name: bufferbloat-tester
+    ports:
+      - "8080:8080"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8080
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - bufferbloat-net
+
+  # Optional: Add a production-ready setup with nginx
+  nginx:
+    image: nginx:alpine
+    container_name: bufferbloat-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - bufferbloat-tester
+    restart: unless-stopped
+    networks:
+      - bufferbloat-net
+    profiles:
+      - production
+
+networks:
+  bufferbloat-net:
+    driver: bridge
