@@ -2,6 +2,8 @@
 
 A comprehensive network quality testing tool that measures **bufferbloat** - the hidden performance killer that affects real-world internet experience even when you have plenty of bandwidth.
 
+<img width="850" height="874" alt="image" src="https://github.com/user-attachments/assets/7bf5fca5-96f3-4f5d-a6e1-115afdeb7e01" />
+
 ![Network Quality Test Interface](https://img.shields.io/badge/Grade-A+-brightgreen) ![Node.js](https://img.shields.io/badge/Node.js-18+-green) ![License](https://img.shields.io/badge/License-MIT-blue)
 
 ## 🎯 What is Bufferbloat?
