@@ -968,64 +968,119 @@ function displayResults() {
             }
         }
         
-        async function measureBaselineLatency() {
-            return new Promise((resolve) => {
-                const latencies = [];
-                const testCount = 10;
-                let responsesReceived = 0;
-                
-                updateStatus('Measuring baseline latency via WebSocket...');
-                console.log('Starting baseline latency measurement');
-                
-                // Clear any existing listeners
-                socket.off('pong');
-                
-                socket.on('pong', (data) => {
-                    if (data.testType === 'baseline') {
-                        const latency = Date.now() - data.clientTimestamp;
-                        
-                        // Sanity check: reject obviously wrong measurements
-                        if (latency > 0 && latency < 5000) { // Reject negative or >5 second latencies
-                            latencies.push(latency);
-                            responsesReceived++;
-                            console.log(`Baseline ping ${data.sequence}: ${latency}ms`);
-                            
-                            if (responsesReceived >= testCount) {
-                                socket.off('pong');
-                                
-                                const avgLatency = latencies.reduce((a, b) => a + b, 0) / latencies.length;
-                                console.log('Baseline latencies:', latencies.map(l => l.toFixed(1)).join(', '));
-                                console.log('Average baseline latency:', avgLatency.toFixed(1) + 'ms');
-                                resolve(avgLatency);
-                            }
-                        } else {
-                            console.warn(`Rejected invalid baseline latency: ${latency}ms`);
-                        }
-                    }
+async function measureBaselineLatency() {
+    return new Promise((resolve) => {
+        const latencies = [];
+        const settlingDuration = 2000; // 2 second settling period
+        const testDuration = 6000; // 6 seconds of measurement
+        const totalDuration = settlingDuration + testDuration;
+        const startTime = Date.now();
+        let packetCount = 0;
+        let measurementStarted = false;
+        
+        updateStatus('Measuring baseline latency with HTTP (same as load tests)...');
+        console.log('Starting baseline measurement - FORCED HTTP to match load tests');
+        
+        // HTTP-based latency measurement (same as load tests)
+        async function measureHttpLatency(sequence) {
+            const pingStart = Date.now();
+            
+            try {
+                // Use identical request format to load tests
+                const response = await fetch(`/api/ping?t=${pingStart}&seq=${sequence}&test=baseline-http`, {
+                    method: 'GET',
+                    cache: 'no-cache'
                 });
                 
-                for (let i = 0; i < testCount; i++) {
-                    setTimeout(() => {
-                        const pingData = {
-                            testType: 'baseline',
-                            clientTimestamp: Date.now(),
-                            sequence: i
-                        };
-                        socket.emit('ping', pingData);
-                        console.log('Sent baseline ping', i);
-                    }, i * 200);
+                if (response.ok) {
+                    const pingEnd = Date.now();
+                    const latency = pingEnd - pingStart;
+                    const elapsed = pingEnd - startTime;
+                    
+                    // Only collect data after settling period
+                    if (elapsed >= settlingDuration && elapsed <= totalDuration) {
+                        if (!measurementStarted) {
+                            measurementStarted = true;
+                            console.log('🎯 Baseline HTTP measurement period started (matching load test method)');
+                        }
+                        
+                        if (latency > 0 && latency < 5000) {
+                            latencies.push(latency);
+                            
+                            // Log every few measurements to compare with load tests
+                            if (sequence % 5 === 0) {
+                                console.log(`Baseline HTTP ping ${sequence}: ${latency}ms (compare to load test values)`);
+                            }
+                        } else {
+                            console.warn(`Rejected baseline HTTP latency: ${latency}ms`);
+                        }
+                    } else if (elapsed < settlingDuration) {
+                        console.log(`Baseline HTTP ping ${sequence} (settling): ${latency}ms`);
+                    }
+                } else {
+                    console.warn(`Baseline HTTP ping ${sequence} failed: ${response.status}`);
+                }
+            } catch (error) {
+                console.warn(`Baseline HTTP ping ${sequence} error:`, error.message);
+            }
+        }
+        
+        // Start periodic measurements - same interval as load tests
+        const pingInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            
+            if (elapsed > totalDuration) {
+                clearInterval(pingInterval);
+                
+                console.log('Baseline HTTP measurement completed');
+                console.log('Raw baseline measurements:', latencies.map(l => l.toFixed(1)).join(', '));
+                
+                if (latencies.length < 5) {
+                    console.error('Insufficient baseline measurements, using fallback');
+                    resolve(50);
+                    return;
                 }
                 
-                setTimeout(() => {
-                    socket.off('pong');
-                    if (responsesReceived === 0) {
-                        console.error('No baseline ping responses received, using fallback');
-                        resolve(50);
-                    }
-                }, (testCount * 200) + 3000);
-            });
-        }
-
+                // Statistical analysis with outlier removal
+                const sortedLatencies = [...latencies].sort((a, b) => a - b);
+                const count = sortedLatencies.length;
+                
+                // Remove outliers (top and bottom 10% or at least 1 from each end)
+                const removeCount = Math.max(1, Math.floor(count * 0.1));
+                const trimmedLatencies = sortedLatencies.slice(removeCount, count - removeCount);
+                
+                console.log(`Baseline analysis: ${count} total, removed ${removeCount} from each end, ${trimmedLatencies.length} remaining`);
+                
+                // Use median for stability
+                const median = trimmedLatencies[Math.floor(trimmedLatencies.length / 2)];
+                const mean = trimmedLatencies.reduce((a, b) => a + b, 0) / trimmedLatencies.length;
+                
+                console.log(`Baseline HTTP results (for comparison with load tests):`);
+                console.log(`  Median: ${median.toFixed(1)}ms (selected as baseline)`);
+                console.log(`  Mean: ${mean.toFixed(1)}ms`);
+                console.log(`  Range: ${sortedLatencies[0].toFixed(1)}ms - ${sortedLatencies[count-1].toFixed(1)}ms`);
+                console.log(`  Protocol: HTTP (matches upload/download load tests)`);
+                
+                resolve(median);
+                return;
+            }
+            
+            const sequence = packetCount++;
+            measureHttpLatency(sequence);
+            
+        }, 200); // Same 200ms interval as load tests
+        
+        // Timeout safety
+        setTimeout(() => {
+            clearInterval(pingInterval);
+            
+            if (latencies.length === 0) {
+                console.error('No baseline HTTP measurements received - using fallback');
+                resolve(50);
+            }
+        }, totalDuration + 2000);
+    });
+}
         
 async function runUploadLoadTest(targetSpeedMbps) {
     return new Promise((resolve) => {
