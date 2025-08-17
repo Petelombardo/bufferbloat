@@ -1,41 +1,35 @@
-# Bufferbloat Network Tester Dockerfile
-# Lightweight container for testing network bufferbloat via HTTP
-
-FROM python:3.11-slim
+# Use official Node.js runtime as base image
+FROM node:18-alpine
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+# Copy package files
+COPY package*.json ./
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies
+RUN npm install --only=production
 
 # Copy application code
-COPY app.py .
-COPY gunicorn.conf.py .
+COPY . .
 
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-RUN chown -R appuser:appuser /app
-USER appuser
+# Create public directory if it doesn't exist
+RUN mkdir -p public
 
-# Expose port
+# Expose the container listen port (will be configured via environment)
 EXPOSE 8080
 
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nodejs -u 1001
+
+# Change ownership of app directory
+RUN chown -R nodejs:nodejs /app
+USER nodejs
+
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/health || exit 1
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:' + (process.env.LISTEN_PORT || 8080) + '/api/config', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => { process.exit(1) })"
 
-# Run the application with Gunicorn for proper concurrency
-CMD ["gunicorn", "--config", "gunicorn.conf.py", "app:app"]
-
-# Labels for metadata
-LABEL maintainer="Network Testing Team"
-LABEL description="Containerized bufferbloat testing tool using HTTP-based latency measurements"
-LABEL version="1.0.0"
+# Start the application
+CMD ["npm", "start"]

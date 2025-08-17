@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bufferbloat Network Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .test-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .main-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 20px 50px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            min-width: 250px;
+        }
+        
+        .main-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+        }
+        
+        .main-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .progress-container {
+            margin: 30px 0;
+            display: none;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 8px;
+            background: #e0e7ff;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+            border-radius: 4px;
+        }
+        
+        .progress-text {
+            font-size: 0.9rem;
+            color: #6b7280;
+            text-align: center;
+        }
+        
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .grade-display {
+            text-align: center;
+            margin: 30px 0;
+            padding: 30px;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        }
+        
+        .grade-letter {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .grade-letter.a-plus { 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            background-clip: text;
+        }
+        .grade-letter.a { 
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            background-clip: text;
+        }
+        .grade-letter.b { 
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            background-clip: text;
+        }
+        .grade-letter.c { 
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            background-clip: text;
+        }
+        .grade-letter.d { 
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            background-clip: text;
+        }
+        .grade-letter.f { 
+            background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            background-clip: text;
+        }
+        
+        .grade-description {
+            font-size: 1.1rem;
+            color: #374151;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        .grade-details {
+            font-size: 0.9rem;
+            color: #6b7280;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e5e7eb;
+            text-align: center;
+        }
+        
+        .metric-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+        
+        .metric-unit {
+            font-size: 0.9rem;
+            color: #9ca3af;
+        }
+        
+        .detailed-results {
+            background: #f8fafc;
+            padding: 25px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+        
+        .detailed-results h4 {
+            color: #374151;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            color: #6b7280;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .status {
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            font-family: 'SF Mono', monospace;
+            font-size: 0.9rem;
+            color: #0369a1;
+        }
+        
+        .explanation {
+            background: #fefce8;
+            border: 1px solid #fde047;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .explanation h4 {
+            color: #a16207;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        
+        .explanation p {
+            color: #92400e;
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .testing {
+            animation: pulse 2s infinite;
+        }
+        
+        @media (max-width: 640px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 30px 20px;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .grade-letter {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Network Quality Test</h1>
+            <p>Comprehensive bufferbloat and performance analysis</p>
+        </div>
+        
+        <div class="content">
+            <div class="test-section">
+                <p style="margin-bottom: 30px; color: #6b7280; line-height: 1.6;">
+                    This test measures your network's true performance under load, detecting bufferbloat 
+                    and providing a quality grade based on jitter, latency, and speed metrics.
+                </p>
+                
+                <button id="runCompleteTest" class="main-button" onclick="runCompleteTest()">
+                    🚀 Run Complete Network Test
+                </button>
+                
+                <div class="progress-container" id="progressContainer">
+                    <div class="progress">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Initializing test...</div>
+                </div>
+            </div>
+            
+            <div class="results" id="results">
+                <div class="grade-display" id="gradeDisplay">
+                    <!-- Grade will be inserted here -->
+                </div>
+                
+                <div class="metrics-grid" id="metricsGrid">
+                    <!-- Metrics will be inserted here -->
+                </div>
+                
+                <div class="detailed-results" id="detailedResults">
+                    <!-- Detailed results will be inserted here -->
+                </div>
+                
+                <div class="explanation">
+                    <h4>📊 About Your Results</h4>
+                    <p>
+                        <strong>Bufferbloat</strong> occurs when network equipment buffers too much data, 
+                        causing latency spikes under load. Your grade is based on <strong>jitter</strong> 
+                        (latency variation) and <strong>latency increase</strong> during the load test, 
+                        which indicate how stable your connection remains when saturated. The test uses 
+                        WebSocket ping measurements for accurate real-time latency monitoring.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="status" id="status">
+                Ready to test your network quality...
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        let config = {};
+        let socket;
+        let isTestRunning = false;
+        let testResults = {};
+        
+        // Initialize
+        async function init() {
+            try {
+                const response = await fetch('/api/config');
+                config = await response.json();
+                updateStatus('Connected and ready to test');
+                console.log('Loaded configuration:', config);
+                
+                socket = io();
+                
+                socket.on('connect', () => {
+                    updateStatus('Connected to server - ready for testing');
+                    console.log('Socket.IO connected');
+                });
+                
+                socket.on('disconnect', () => {
+                    updateStatus('Disconnected from server');
+                    console.log('Socket.IO disconnected');
+                });
+                
+                socket.on('connect_error', (error) => {
+                    updateStatus('Failed to connect to server: ' + error.message);
+                    console.error('Socket.IO connection error:', error);
+                });
+                
+            } catch (error) {
+                updateStatus('Error loading configuration: ' + error.message);
+                console.error('Initialization error:', error);
+            }
+        }
+        
+        function updateStatus(message) {
+            document.getElementById('status').textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        }
+        
+        function updateProgress(percent, text) {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            if (progressBar) {
+                progressBar.style.width = percent + '%';
+            }
+            if (progressText && text) {
+                progressText.textContent = text;
+            }
+        }
+        
+        function safeToFixed(value, decimals = 1) {
+            if (value === null || value === undefined || isNaN(value)) {
+                return '0.0';
+            }
+            return Number(value).toFixed(decimals);
+        }
+        
+        function calculateJitter(latencies) {
+            if (!latencies || latencies.length < 2) return 0;
+            
+            const diffs = [];
+            for (let i = 1; i < latencies.length; i++) {
+                const diff = Math.abs(latencies[i] - latencies[i-1]);
+                if (!isNaN(diff)) {
+                    diffs.push(diff);
+                }
+            }
+            
+            if (diffs.length === 0) return 0;
+            return diffs.reduce((a, b) => a + b, 0) / diffs.length;
+        }
+        
+        function calculateBufferbloatSeverity(latencyIncrease) {
+            latencyIncrease = Number(latencyIncrease) || 0;
+            
+            if (latencyIncrease < 20) return 'Minimal';
+            if (latencyIncrease < 50) return 'Low';
+            if (latencyIncrease < 100) return 'Moderate';
+            if (latencyIncrease < 200) return 'High';
+            return 'Severe';
+        }
+        
+function calculateGrade(jitter, latencyIncrease, pingCount = 0, dataQuality = 'unknown') {
+    // Ensure we have valid numbers
+    jitter = Number(jitter) || 0;
+    latencyIncrease = Number(latencyIncrease) || 0;
+    pingCount = Number(pingCount) || 0;
+    
+    // FIXED: Handle insufficient data cases
+    if (pingCount < 3 || dataQuality === 'failed' || dataQuality === 'insufficient') {
+        return {
+            grade: 'F',
+            description: 'Test Failed',
+            details: `Insufficient data collected (${pingCount} samples)`,
+            combinedScore: 0,
+            jitterScore: 0,
+            latencyScore: 0,
+            dataQuality: dataQuality,
+            reliable: false
+        };
+    }
+    
+    // FIXED: Penalize tests with limited data
+    let dataQualityMultiplier = 1.0;
+    if (dataQuality === 'limited' || pingCount < 10) {
+        dataQualityMultiplier = 0.7; // 30% penalty for limited data
+    } else if (pingCount < 20) {
+        dataQualityMultiplier = 0.85; // 15% penalty for somewhat limited data
+    }
+    
+    // Normalize scores (0-100) for both metrics
+    let jitterScore = 100;
+    let latencyScore = 100;
+    
+    // FIXED: More realistic jitter scoring thresholds
+    if (jitter > 100) jitterScore = 0;
+    else if (jitter > 60) jitterScore = 10;
+    else if (jitter > 40) jitterScore = 25;
+    else if (jitter > 25) jitterScore = 50;
+    else if (jitter > 15) jitterScore = 70;
+    else if (jitter > 8) jitterScore = 85;
+    else if (jitter > 3) jitterScore = 95;
+    // else 100 (excellent - but only if we have good data)
+    
+    // FIXED: More realistic latency increase scoring
+    if (latencyIncrease > 500) latencyScore = 0;
+    else if (latencyIncrease > 300) latencyScore = 10;
+    else if (latencyIncrease > 200) latencyScore = 25;
+    else if (latencyIncrease > 100) latencyScore = 50;
+    else if (latencyIncrease > 50) latencyScore = 70;
+    else if (latencyIncrease > 25) latencyScore = 85;
+    else if (latencyIncrease > 10) latencyScore = 95;
+    // else 100 (excellent)
+    
+    // Combined score (jitter weighted 70%, latency increase 30%)
+    let combinedScore = (jitterScore * 0.7) + (latencyScore * 0.3);
+    
+    // FIXED: Apply data quality penalty
+    combinedScore *= dataQualityMultiplier;
+    combinedScore = Math.round(combinedScore);
+    
+    // Grade assignments with more realistic thresholds
+    const grades = [
+        { threshold: 90, grade: 'A+', description: 'Excellent', details: 'Outstanding network quality with minimal bufferbloat' },
+        { threshold: 80, grade: 'A', description: 'Very Good', details: 'High-quality network suitable for all applications' },
+        { threshold: 70, grade: 'B+', description: 'Good+', details: 'Good network quality with minor bufferbloat under load' },
+        { threshold: 60, grade: 'B', description: 'Good', details: 'Acceptable network quality with some bufferbloat' },
+        { threshold: 50, grade: 'B-', description: 'Fair+', details: 'Fair network quality with noticeable bufferbloat' },
+        { threshold: 40, grade: 'C', description: 'Fair', details: 'Acceptable for most uses, moderate bufferbloat detected' },
+        { threshold: 30, grade: 'D+', description: 'Poor+', details: 'Poor network quality with significant bufferbloat' },
+        { threshold: 20, grade: 'D', description: 'Poor', details: 'Significant bufferbloat affecting performance' },
+        { threshold: 10, grade: 'D-', description: 'Very Poor', details: 'Severe bufferbloat causing major issues' },
+        { threshold: 0, grade: 'F', description: 'Failed', details: 'Extreme bufferbloat or test failure' }
+    ];
+    
+    let grade = grades.find(g => combinedScore >= g.threshold) || grades[grades.length - 1];
+    
+    // FIXED: Add data quality warning to description if needed
+    if (dataQualityMultiplier < 1.0) {
+        grade.details += ` (Limited data: ${pingCount} samples)`;
+    }
+    
+    return {
+        ...grade,
+        combinedScore: combinedScore,
+        jitterScore: Math.round(jitterScore * dataQualityMultiplier),
+        latencyScore: Math.round(latencyScore * dataQualityMultiplier),
+        dataQuality: dataQuality,
+        pingCount: pingCount,
+        reliable: pingCount >= 20 && dataQuality === 'good'
+    };
+}
+        
+// FIXED: Update the runCompleteTest function to pass all required parameters to calculateGrade
+
+async function runCompleteTest() {
+    const btn = document.getElementById('runCompleteTest');
+    const progressContainer = document.getElementById('progressContainer');
+    const results = document.getElementById('results');
+    
+    btn.disabled = true;
+    btn.classList.add('testing');
+    progressContainer.style.display = 'block';
+    results.style.display = 'none';
+    isTestRunning = true;
+    
+    try {
+        // Step 1: Speed Test
+        updateProgress(5, 'Testing download speed...');
+        updateStatus('Measuring download speed...');
+        const downloadSpeed = await testDownloadSpeed();
+        
+        updateProgress(15, 'Testing upload speed...');
+        updateStatus('Measuring upload speed...');
+        const uploadSpeed = await testUploadSpeed();
+        
+        const speedResults = {
+            downloadMbps: downloadSpeed,
+            uploadMbps: uploadSpeed
+        };
+        
+        // Step 2: Baseline Latency
+        updateProgress(25, 'Measuring baseline latency...');
+        updateStatus('Establishing baseline network latency...');
+        const baselineLatency = await measureBaselineLatency();
+        
+        // Step 3: Upload Bufferbloat Test
+        updateProgress(35, 'Testing upload bufferbloat...');
+        updateStatus('Testing upload bufferbloat - measuring latency under load...');
+        const uploadLoadResults = await runUploadLoadTest(speedResults.uploadMbps);
+        
+        // Step 4: Download Bufferbloat Test
+        updateProgress(65, 'Testing download bufferbloat...');
+        updateStatus('Testing download bufferbloat - measuring latency under load...');
+        const downloadLoadResults = await runDownloadLoadTest(speedResults.downloadMbps);
+        
+        updateProgress(90, 'Analyzing results...');
+        updateStatus('Calculating final results and grades...');
+        
+        // Compile final results with safe defaults
+        const safeUploadResults = {
+            avgLatency: uploadLoadResults.avgLatency || 0,
+            jitter: uploadLoadResults.jitter || 0,
+            pingCount: uploadLoadResults.pingCount || 0,
+            dataQuality: uploadLoadResults.dataQuality || 'unknown'
+        };
+        
+        const safeDownloadResults = {
+            avgLatency: downloadLoadResults.avgLatency || 0,
+            jitter: downloadLoadResults.jitter || 0,
+            pingCount: downloadLoadResults.pingCount || 0,
+            dataQuality: downloadLoadResults.dataQuality || 'unknown'
+        };
+        
+        const uploadLatencyIncrease = Math.max(0, safeUploadResults.avgLatency - baselineLatency);
+        const downloadLatencyIncrease = Math.max(0, safeDownloadResults.avgLatency - baselineLatency);
+        
+        // FIXED: Pass all required parameters to calculateGrade
+        const uploadGrade = calculateGrade(
+            safeUploadResults.jitter, 
+            uploadLatencyIncrease, 
+            safeUploadResults.pingCount, 
+            safeUploadResults.dataQuality
+        );
+        
+        const downloadGrade = calculateGrade(
+            safeDownloadResults.jitter, 
+            downloadLatencyIncrease, 
+            safeDownloadResults.pingCount, 
+            safeDownloadResults.dataQuality
+        );
+        
+        // Overall grade is the worse of the two
+        const overallGrade = uploadGrade.combinedScore < downloadGrade.combinedScore ? uploadGrade : downloadGrade;
+        overallGrade.description = `Overall: ${overallGrade.description}`;
+        overallGrade.details = `Combined upload and download analysis (worst case)`;
+        
+        testResults = {
+            speed: speedResults,
+            baseline: {
+                latency: baselineLatency || 0
+            },
+            upload: {
+                latency: safeUploadResults.avgLatency,
+                jitter: safeUploadResults.jitter,
+                pingCount: safeUploadResults.pingCount,
+                latencyIncrease: uploadLatencyIncrease,
+                grade: uploadGrade,
+                bufferbloatSeverity: calculateBufferbloatSeverity(uploadLatencyIncrease),
+                dataQuality: safeUploadResults.dataQuality
+            },
+            download: {
+                latency: safeDownloadResults.avgLatency,
+                jitter: safeDownloadResults.jitter,
+                pingCount: safeDownloadResults.pingCount,
+                latencyIncrease: downloadLatencyIncrease,
+                grade: downloadGrade,
+                bufferbloatSeverity: calculateBufferbloatSeverity(downloadLatencyIncrease),
+                dataQuality: safeDownloadResults.dataQuality
+            },
+            analysis: {
+                overallGrade: overallGrade,
+                worstDirection: uploadGrade.combinedScore < downloadGrade.combinedScore ? 'upload' : 'download'
+            }
+        };
+        
+        console.log('Final test results:', testResults);
+        
+        updateProgress(100, 'Test complete!');
+        updateStatus('Network test completed successfully');
+        
+        displayResults();
+        
+    } catch (error) {
+        updateStatus('Test failed: ' + error.message);
+        console.error('Complete test error:', error);
+        
+        // Show error results with safe defaults
+        testResults = {
+            speed: { downloadMbps: 0, uploadMbps: 0 },
+            baseline: { latency: 0 },
+            upload: { 
+                latency: 0, jitter: 0, pingCount: 0, latencyIncrease: 0, 
+                grade: { grade: 'F', description: 'Test Failed', details: 'Upload test failed', combinedScore: 0 }, 
+                bufferbloatSeverity: 'Unknown',
+                dataQuality: 'failed'
+            },
+            download: { 
+                latency: 0, jitter: 0, pingCount: 0, latencyIncrease: 0, 
+                grade: { grade: 'F', description: 'Test Failed', details: 'Download test failed', combinedScore: 0 }, 
+                bufferbloatSeverity: 'Unknown',
+                dataQuality: 'failed'
+            },
+            analysis: {
+                overallGrade: { grade: 'F', description: 'Test Failed', details: 'Unable to complete network test', combinedScore: 0 },
+                worstDirection: 'unknown'
+            }
+        };
+        displayResults();
+    } finally {
+        btn.disabled = false;
+        btn.classList.remove('testing');
+        btn.textContent = '🔄 Run Test Again';
+        progressContainer.style.display = 'none';
+        isTestRunning = false;
+    }
+}
+
+function displayResults() {
+    const results = document.getElementById('results');
+    const gradeDisplay = document.getElementById('gradeDisplay');
+    const metricsGrid = document.getElementById('metricsGrid');
+    const detailedResults = document.getElementById('detailedResults');
+    
+    console.log('DisplayResults called with:', testResults);
+    
+    // Ensure all required properties exist with safe defaults
+    const safeTestResults = {
+        speed: testResults.speed || { downloadMbps: 0, uploadMbps: 0 },
+        baseline: testResults.baseline || { latency: 0 },
+        upload: testResults.upload || { 
+            latency: 0, jitter: 0, pingCount: 0, latencyIncrease: 0,
+            grade: { grade: 'F', description: 'Error', details: 'Upload data missing', combinedScore: 0 },
+            bufferbloatSeverity: 'Unknown',
+            dataQuality: 'failed'
+        },
+        download: testResults.download || { 
+            latency: 0, jitter: 0, pingCount: 0, latencyIncrease: 0,
+            grade: { grade: 'F', description: 'Error', details: 'Download data missing', combinedScore: 0 },
+            bufferbloatSeverity: 'Unknown',
+            dataQuality: 'failed'
+        },
+        analysis: testResults.analysis || {
+            overallGrade: { grade: 'F', description: 'Error', details: 'Analysis missing', combinedScore: 0 },
+            worstDirection: 'unknown'
+        }
+    };
+    
+    const overallGrade = safeTestResults.analysis.overallGrade;
+    const uploadGrade = safeTestResults.upload.grade;
+    const downloadGrade = safeTestResults.download.grade;
+    
+    // FIXED: More specific data quality warning logic (aligned thresholds)
+    let gradeWarning = '';
+    const uploadReliable = safeTestResults.upload.pingCount >= 15 && safeTestResults.upload.dataQuality === 'good';
+    const downloadReliable = safeTestResults.download.pingCount >= 15 && safeTestResults.download.dataQuality === 'good';
+    
+    console.log('Data quality check:', {
+        upload: { 
+            pingCount: safeTestResults.upload.pingCount, 
+            dataQuality: safeTestResults.upload.dataQuality, 
+            reliable: uploadReliable 
+        },
+        download: { 
+            pingCount: safeTestResults.download.pingCount, 
+            dataQuality: safeTestResults.download.dataQuality, 
+            reliable: downloadReliable 
+        }
+    });
+    
+    // Only show warning if there are actual data quality issues
+    if (!uploadReliable && safeTestResults.upload.pingCount > 0) {
+        gradeWarning = `<div style="margin-top: 10px; padding: 10px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; font-size: 0.9rem; color: #92400e;"><strong>⚠️ Upload Data Quality:</strong> Limited samples (${safeTestResults.upload.pingCount}) or poor quality (${safeTestResults.upload.dataQuality}).</div>`;
+    }
+    
+    if (!downloadReliable && safeTestResults.download.pingCount > 0) {
+        const downloadWarning = `<div style="margin-top: 10px; padding: 10px; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; font-size: 0.9rem; color: #92400e;"><strong>⚠️ Download Data Quality:</strong> Limited samples (${safeTestResults.download.pingCount}) or poor quality (${safeTestResults.download.dataQuality}).</div>`;
+        gradeWarning += downloadWarning;
+    }
+    
+    // If both tests have good data, don't show any warning
+    if (uploadReliable && downloadReliable) {
+        gradeWarning = '';
+    }
+    
+    gradeDisplay.innerHTML = `
+        <div class="grade-letter ${overallGrade.grade.toLowerCase().replace('+', '-plus').replace('-', '-minus')}">${overallGrade.grade}</div>
+        <div class="grade-description">${overallGrade.description}</div>
+        <div class="grade-details">${overallGrade.details}</div>
+        <div style="margin-top: 15px; font-size: 0.9rem; color: #6b7280;">
+            Worst direction: <strong>${safeTestResults.analysis.worstDirection}</strong>
+            <br>Upload: ${uploadGrade.grade} (${uploadGrade.pingCount || safeTestResults.upload.pingCount} samples) • Download: ${downloadGrade.grade} (${downloadGrade.pingCount || safeTestResults.download.pingCount} samples)
+        </div>
+        ${gradeWarning}
+    `;
+    
+    // Display key metrics with both directions
+    metricsGrid.innerHTML = `
+        <div class="metric-card">
+            <div class="metric-label">Download Speed</div>
+            <div class="metric-value">${safeToFixed(safeTestResults.speed.downloadMbps)}</div>
+            <div class="metric-unit">Mbps</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Upload Speed</div>
+            <div class="metric-value">${safeToFixed(safeTestResults.speed.uploadMbps)}</div>
+            <div class="metric-unit">Mbps</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Upload Jitter</div>
+            <div class="metric-value">${safeToFixed(safeTestResults.upload.jitter)}</div>
+            <div class="metric-unit">ms</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Download Jitter</div>
+            <div class="metric-value">${safeToFixed(safeTestResults.download.jitter)}</div>
+            <div class="metric-unit">ms</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Upload Latency Increase</div>
+            <div class="metric-value">${safeToFixed(safeTestResults.upload.latencyIncrease)}</div>
+            <div class="metric-unit">ms</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Download Latency Increase</div>
+            <div class="metric-value">${safeToFixed(safeTestResults.download.latencyIncrease)}</div>
+            <div class="metric-unit">ms</div>
+        </div>
+    `;
+    
+    // Display detailed results with both directions
+    detailedResults.innerHTML = `
+        <h4>📈 Detailed Analysis</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <h5 style="color: #374151; margin-bottom: 10px; font-size: 1rem;">📤 Upload Bufferbloat</h5>
+                <div class="detail-row">
+                    <span class="detail-label">Grade:</span>
+                    <span class="detail-value">${uploadGrade.grade} (${uploadGrade.combinedScore || 0}/100)</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Baseline Latency:</span>
+                    <span class="detail-value">${safeToFixed(safeTestResults.baseline.latency)} ms</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Loaded Latency:</span>
+                    <span class="detail-value">${safeToFixed(safeTestResults.upload.latency)} ms</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Latency Increase:</span>
+                    <span class="detail-value">${safeToFixed(safeTestResults.upload.latencyIncrease)} ms</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Jitter:</span>
+                    <span class="detail-value">${safeToFixed(safeTestResults.upload.jitter)} ms</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Ping Samples:</span>
+                    <span class="detail-value">${safeTestResults.upload.pingCount || 0}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Data Quality:</span>
+                    <span class="detail-value">${safeTestResults.upload.dataQuality}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Bufferbloat Severity:</span>
+                    <span class="detail-value">${safeTestResults.upload.bufferbloatSeverity}</span>
+                </div>
+            </div>
+            <div>
+                <h5 style="color: #374151; margin-bottom: 10px; font-size: 1rem;">📥 Download Bufferbloat</h5>
+                <div class="detail-row">
+                    <span class="detail-label">Grade:</span>
+                    <span class="detail-value">${downloadGrade.grade} (${downloadGrade.combinedScore || 0}/100)</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Baseline Latency:</span>
+                    <span class="detail-value">${safeToFixed(safeTestResults.baseline.latency)} ms</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Loaded Latency:</span>
+                    <span class="detail-value">${safeToFixed(safeTestResults.download.latency)} ms</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Latency Increase:</span>
+                    <span class="detail-value">${safeToFixed(safeTestResults.download.latencyIncrease)} ms</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Jitter:</span>
+                    <span class="detail-value">${safeToFixed(safeTestResults.download.jitter)} ms</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Ping Samples:</span>
+                    <span class="detail-value">${safeTestResults.download.pingCount || 0}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Data Quality:</span>
+                    <span class="detail-value">${safeTestResults.download.dataQuality}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Bufferbloat Severity:</span>
+                    <span class="detail-value">${safeTestResults.download.bufferbloatSeverity}</span>
+                </div>
+            </div>
+        </div>
+        <div class="detail-row" style="border-top: 2px solid #e5e7eb; padding-top: 15px; margin-top: 15px;">
+            <span class="detail-label"><strong>Overall Quality Grade:</strong></span>
+            <span class="detail-value"><strong>${overallGrade.grade} (${overallGrade.combinedScore || 0}/100)</strong></span>
+        </div>
+    `;
+    
+    results.style.display = 'block';
+}
+
+        async function testDownloadSpeed() {
+            // Use configured limit or default test size
+            let testSize = 10 * 1024 * 1024; // Default 10MB
+            
+            if (config.maxDownloadMbps) {
+                // Calculate test size based on bandwidth limit (target ~5 second test)
+                const maxBytesPerSecond = (config.maxDownloadMbps * 1024 * 1024) / 8;
+                testSize = Math.min(maxBytesPerSecond * 5, 25 * 1024 * 1024); // Max 5 seconds or 25MB
+                console.log(`Download test limited to ${config.maxDownloadMbps} Mbps, using ${(testSize / 1024 / 1024).toFixed(1)} MB test size`);
+            }
+            
+            const startTime = performance.now();
+            
+            const response = await fetch(`/api/download/${testSize}`);
+            const data = await response.arrayBuffer();
+            
+            const endTime = performance.now();
+            const durationSeconds = (endTime - startTime) / 1000;
+            const speedMbps = (data.byteLength * 8) / (durationSeconds * 1000000);
+            
+            return speedMbps;
+        }
+        
+        async function testUploadSpeed() {
+            // Use a reasonable test size - server will throttle if needed
+            const testSize = 5 * 1024 * 1024; // 5MB default
+            const data = new ArrayBuffer(testSize);
+            const startTime = performance.now();
+            
+            console.log(`Starting upload test with ${(testSize / 1024 / 1024).toFixed(1)} MB`);
+            if (config.maxUploadMbps) {
+                console.log(`Server will throttle to ${config.maxUploadMbps} Mbps`);
+            }
+            
+            try {
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Upload test timeout (30s)')), 30000);
+                });
+                
+                const fetchPromise = fetch('/api/upload', {
+                    method: 'POST',
+                    body: data,
+                    headers: {
+                        'Content-Type': 'application/octet-stream',
+                        'Content-Length': testSize.toString()
+                    }
+                });
+                
+                const response = await Promise.race([fetchPromise, timeoutPromise]);
+                
+                if (!response.ok) {
+                    throw new Error(`Upload test failed: ${response.status} ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.limited && result.maxConfiguredMbps) {
+                    console.log(`Upload was throttled to ${result.maxConfiguredMbps} Mbps, measured: ${result.speedMbps.toFixed(2)} Mbps`);
+                } else {
+                    console.log(`Upload completed at ${result.speedMbps.toFixed(2)} Mbps (no throttling)`);
+                }
+                
+                return result.speedMbps;
+            } catch (error) {
+                console.error('Upload test error:', error);
+                const fallbackDuration = performance.now() - startTime;
+                const fallbackSpeed = Math.max(1, (testSize * 8) / (fallbackDuration * 1000));
+                console.log(`Using fallback upload speed: ${fallbackSpeed.toFixed(2)} Mbps`);
+                return fallbackSpeed;
+            }
+        }
+        
+        async function measureBaselineLatency() {
+            return new Promise((resolve) => {
+                const latencies = [];
+                const testCount = 10;
+                let responsesReceived = 0;
+                
+                updateStatus('Measuring baseline latency via WebSocket...');
+                console.log('Starting baseline latency measurement');
+                
+                // Clear any existing listeners
+                socket.off('pong');
+                
+                socket.on('pong', (data) => {
+                    if (data.testType === 'baseline') {
+                        const latency = Date.now() - data.clientTimestamp;
+                        
+                        // Sanity check: reject obviously wrong measurements
+                        if (latency > 0 && latency < 5000) { // Reject negative or >5 second latencies
+                            latencies.push(latency);
+                            responsesReceived++;
+                            console.log(`Baseline ping ${data.sequence}: ${latency}ms`);
+                            
+                            if (responsesReceived >= testCount) {
+                                socket.off('pong');
+                                
+                                const avgLatency = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+                                console.log('Baseline latencies:', latencies.map(l => l.toFixed(1)).join(', '));
+                                console.log('Average baseline latency:', avgLatency.toFixed(1) + 'ms');
+                                resolve(avgLatency);
+                            }
+                        } else {
+                            console.warn(`Rejected invalid baseline latency: ${latency}ms`);
+                        }
+                    }
+                });
+                
+                for (let i = 0; i < testCount; i++) {
+                    setTimeout(() => {
+                        const pingData = {
+                            testType: 'baseline',
+                            clientTimestamp: Date.now(),
+                            sequence: i
+                        };
+                        socket.emit('ping', pingData);
+                        console.log('Sent baseline ping', i);
+                    }, i * 200);
+                }
+                
+                setTimeout(() => {
+                    socket.off('pong');
+                    if (responsesReceived === 0) {
+                        console.error('No baseline ping responses received, using fallback');
+                        resolve(50);
+                    }
+                }, (testCount * 200) + 3000);
+            });
+        }
+
+        
+async function runUploadLoadTest(targetSpeedMbps) {
+    return new Promise((resolve) => {
+        const latencies = [];
+        let packetCount = 0;
+        const settlingDuration = 2000; // 2 second settling period
+        const testDuration = 8000; // 8 seconds of actual measurement
+        const totalDuration = settlingDuration + testDuration;
+        const startTime = Date.now();
+        let uploadStream = null;
+        let pingInterval;
+        let progressInterval;
+        let statusInterval;
+        let measurementStarted = false;
+        let streamActive = false;
+        
+        updateStatus('Running upload bufferbloat test with streaming approach...');
+        console.log('Starting streaming upload bufferbloat test');
+        
+        // Detect environment
+        const isLocalhost = window.location.hostname === 'localhost' || 
+                           window.location.hostname === '127.0.0.1' || 
+                           window.location.hostname === '0.0.0.0';
+        
+        console.log(`Environment: ${isLocalhost ? 'localhost' : 'remote'}`);
+        
+        // Progress tracking
+        progressInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            let progressPercent;
+            let statusText;
+            
+            if (elapsed < settlingDuration) {
+                progressPercent = elapsed / settlingDuration;
+                const currentProgress = 35 + (progressPercent * 8);
+                statusText = `Starting upload stream... ${((1 - progressPercent) * (settlingDuration / 1000)).toFixed(1)}s`;
+                updateProgress(currentProgress, statusText);
+            } else {
+                const measurementElapsed = elapsed - settlingDuration;
+                progressPercent = Math.min(measurementElapsed / testDuration, 1);
+                const currentProgress = 43 + (progressPercent * 12);
+                statusText = `Measuring under load... ${(progressPercent * 100).toFixed(0)}%`;
+                updateProgress(currentProgress, statusText);
+            }
+        }, 250);
+        
+        // Status updates
+        statusInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            
+            if (elapsed < settlingDuration) {
+                const settlingRemaining = Math.ceil((settlingDuration - elapsed) / 1000);
+                updateStatus(`Upload stream starting: ${settlingRemaining}s remaining (stream: ${streamActive ? 'active' : 'starting'})`);
+            } else {
+                const measurementElapsed = elapsed - settlingDuration;
+                const secondsRemaining = Math.max(0, Math.ceil((testDuration - measurementElapsed) / 1000));
+                const currentJitter = latencies.length > 1 ? calculateJitter(latencies) : 0;
+                const recentLatency = latencies.length > 0 ? latencies[latencies.length - 1] : 0;
+                updateStatus(`Upload measurement: ${secondsRemaining}s remaining, latency: ${recentLatency.toFixed(1)}ms, jitter: ${currentJitter.toFixed(1)}ms, samples: ${latencies.length}`);
+            }
+        }, 1000);
+        
+        // HTTP latency measurement function
+        async function measureHttpLatency(sequence) {
+            const pingStart = Date.now();
+            
+            try {
+                const response = await fetch(`/api/ping?t=${pingStart}&seq=${sequence}&test=upload-stream`, {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                
+                if (response.ok) {
+                    const pingEnd = Date.now();
+                    const latency = pingEnd - pingStart;
+                    const testElapsed = pingEnd - startTime;
+                    
+                    // Only collect data during measurement period
+                    if (testElapsed >= settlingDuration && testElapsed <= totalDuration) {
+                        if (!measurementStarted) {
+                            measurementStarted = true;
+                            console.log('🎯 Upload measurement period started - collecting latency data');
+                        }
+                        
+                        if (latency > 0 && latency < 10000) { // More reasonable upper bound
+                            latencies.push(latency);
+                            
+                            if (latencies.length % 5 === 0) { // Log every 5th measurement
+                                const currentJitter = calculateJitter(latencies);
+                                console.log(`Upload ping ${sequence}: ${latency}ms (avg jitter: ${currentJitter.toFixed(1)}ms, ${latencies.length} samples)`);
+                            }
+                        } else {
+                            console.warn(`Rejected upload latency: ${latency}ms`);
+                        }
+                    } else if (testElapsed < settlingDuration) {
+                        console.log(`Upload ping ${sequence} (settling): ${latency}ms`);
+                    }
+                } else {
+                    console.warn(`Upload ping ${sequence} failed: ${response.status}`);
+                }
+            } catch (error) {
+                console.warn(`Upload ping ${sequence} error:`, error.message);
+            }
+        }
+        
+        // Start background upload stream
+        async function startUploadStream() {
+            try {
+                console.log('Starting background upload stream...');
+                
+                // Create a readable stream that generates data
+                const stream = new ReadableStream({
+                    start(controller) {
+                        const chunkSize = isLocalhost ? 4096 : 8192; // Smaller chunks for localhost
+                        let totalSent = 0;
+                        const maxBytes = isLocalhost ? 50 * 1024 * 1024 : 200 * 1024 * 1024; // Limit total upload
+                        
+                        function generateChunk() {
+                            if (totalSent >= maxBytes || Date.now() - startTime > totalDuration + 1000) {
+                                controller.close();
+                                console.log('Upload stream completed');
+                                return;
+                            }
+                            
+                            const chunk = new Uint8Array(chunkSize);
+                            // Fill with random data
+                            for (let i = 0; i < chunkSize; i++) {
+                                chunk[i] = Math.floor(Math.random() * 256);
+                            }
+                            
+                            controller.enqueue(chunk);
+                            totalSent += chunkSize;
+                            
+                            // Control upload rate for localhost
+                            const delay = isLocalhost ? 50 : 10; // 50ms delay for localhost, 10ms for remote
+                            setTimeout(generateChunk, delay);
+                        }
+                        
+                        // Start generating after a brief delay
+                        setTimeout(generateChunk, 100);
+                        streamActive = true;
+                    }
+                });
+                
+                // Start the upload
+                uploadStream = fetch('/api/upload', {
+                    method: 'POST',
+                    body: stream,
+                    headers: {
+                        'Content-Type': 'application/octet-stream'
+                    }
+                });
+                
+                console.log('Upload stream initiated');
+                
+            } catch (error) {
+                console.error('Failed to start upload stream:', error);
+                streamActive = false;
+            }
+        }
+        
+        // Start the upload stream immediately
+        startUploadStream();
+        
+        // Start periodic latency measurements
+        pingInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            
+            if (elapsed > totalDuration) {
+                return;
+            }
+            
+            const sequence = packetCount++;
+            measureHttpLatency(sequence);
+            
+        }, 200); // Ping every 200ms
+        
+        // Cleanup and resolution
+        setTimeout(() => {
+            if (pingInterval) clearInterval(pingInterval);
+            if (progressInterval) clearInterval(progressInterval);
+            if (statusInterval) clearInterval(statusInterval);
+            
+            // Try to abort the upload stream if still active
+            if (uploadStream) {
+                uploadStream.catch(() => {}); // Ignore errors
+            }
+            
+            console.log('Upload bufferbloat test completed');
+            console.log('Total latency measurements:', latencies.length);
+            
+            if (latencies.length < 5) {
+                console.error('Insufficient upload latency measurements:', latencies.length);
+                resolve({
+                    avgLatency: latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 100,
+                    pingCount: latencies.length,
+                    jitter: latencies.length > 1 ? calculateJitter(latencies) : 0,
+                    dataQuality: 'insufficient'
+                });
+                return;
+            }
+            
+            const avgLatency = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+            const jitter = calculateJitter(latencies);
+            
+            console.log(`Upload stream results - Avg Latency: ${avgLatency.toFixed(1)}ms, Samples: ${latencies.length}, Jitter: ${jitter.toFixed(1)}ms`);
+            
+            resolve({
+                avgLatency: Number(avgLatency) || 0,
+                pingCount: latencies.length,
+                jitter: Number(jitter) || 0,
+                dataQuality: latencies.length >= 15 ? 'good' : 'limited'
+            });
+            
+        }, totalDuration + 2000);
+    });
+}
+
+
+async function runDownloadLoadTest(targetSpeedMbps) {
+    return new Promise((resolve) => {
+        const latencies = [];
+        let packetCount = 0;
+        const settlingDuration = 2000; // 2 second settling period
+        const testDuration = 8000; // 8 seconds of actual measurement
+        const totalDuration = settlingDuration + testDuration;
+        const startTime = Date.now();
+        let downloadStreams = [];
+        let pingInterval;
+        let progressInterval;
+        let statusInterval;
+        let measurementStarted = false;
+        
+        updateStatus('Running download bufferbloat test with HTTP latency measurement...');
+        console.log('Starting download bufferbloat test');
+        
+        // Detect environment for optimized settings
+        const isLocalhost = window.location.hostname === 'localhost' || 
+                           window.location.hostname === '127.0.0.1' || 
+                           window.location.hostname === '0.0.0.0';
+        
+        // Adjust parameters based on environment
+        const chunkSizeKB = isLocalhost ? 50 : 100; // Smaller chunks for localhost
+        const streamsCount = isLocalhost ? 2 : Math.min(6, Math.max(2, Math.ceil(targetSpeedMbps / 10)));
+        const bytesPerStreamPerSecond = (targetSpeedMbps * 1024 * 1024) / (8 * streamsCount);
+        const chunksPerStreamPerSecond = bytesPerStreamPerSecond / (chunkSizeKB * 1024);
+        const loadIntervalMs = Math.max(100, 1000 / chunksPerStreamPerSecond);
+        
+        console.log(`Environment: ${isLocalhost ? 'localhost' : 'remote'}`);
+        console.log(`Download config: ${targetSpeedMbps} Mbps target, ${streamsCount} streams, ${chunkSizeKB}KB chunks, ${loadIntervalMs.toFixed(1)}ms interval`);
+        
+        // Progress tracking
+        progressInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            let progressPercent;
+            let statusText;
+            
+            if (elapsed < settlingDuration) {
+                progressPercent = elapsed / settlingDuration;
+                const currentProgress = 60 + (progressPercent * 8);
+                statusText = `Starting download streams... ${((1 - progressPercent) * (settlingDuration / 1000)).toFixed(1)}s`;
+                updateProgress(currentProgress, statusText);
+            } else {
+                const measurementElapsed = elapsed - settlingDuration;
+                progressPercent = Math.min(measurementElapsed / testDuration, 1);
+                const currentProgress = 68 + (progressPercent * 12);
+                statusText = `Measuring under load... ${(progressPercent * 100).toFixed(0)}%`;
+                updateProgress(currentProgress, statusText);
+            }
+        }, 250);
+        
+        // Status updates with measurement info
+        statusInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            
+            if (elapsed < settlingDuration) {
+                const settlingRemaining = Math.ceil((settlingDuration - elapsed) / 1000);
+                updateStatus(`Download streams starting: ${settlingRemaining}s remaining`);
+            } else {
+                const measurementElapsed = elapsed - settlingDuration;
+                const secondsRemaining = Math.max(0, Math.ceil((testDuration - measurementElapsed) / 1000));
+                const currentJitter = latencies.length > 1 ? calculateJitter(latencies) : 0;
+                const recentLatency = latencies.length > 0 ? latencies[latencies.length - 1] : 0;
+                updateStatus(`Download measurement: ${secondsRemaining}s remaining, latency: ${recentLatency.toFixed(1)}ms, jitter: ${currentJitter.toFixed(1)}ms, samples: ${latencies.length}`);
+            }
+        }, 1000);
+        
+        // HTTP latency measurement function
+        async function measureHttpLatency(sequence) {
+            const pingStart = Date.now();
+            
+            try {
+                const response = await fetch(`/api/ping?t=${pingStart}&seq=${sequence}&test=download-load`, {
+                    method: 'GET',
+                    cache: 'no-cache'
+                });
+                
+                if (response.ok) {
+                    const pingEnd = Date.now();
+                    const latency = pingEnd - pingStart;
+                    const testElapsed = pingEnd - startTime;
+                    
+                    // Only collect data during measurement period
+                    if (testElapsed >= settlingDuration && testElapsed <= totalDuration) {
+                        if (!measurementStarted) {
+                            measurementStarted = true;
+                            console.log('🎯 Download measurement period started - collecting latency data');
+                        }
+                        
+                        if (latency > 0 && latency < 10000) {
+                            latencies.push(latency);
+                            
+                            if (latencies.length % 5 === 0) { // Log every 5th measurement
+                                const currentJitter = calculateJitter(latencies);
+                                console.log(`Download ping ${sequence}: ${latency}ms (avg jitter: ${currentJitter.toFixed(1)}ms, ${latencies.length} samples)`);
+                            }
+                        } else {
+                            console.warn(`Rejected download latency: ${latency}ms`);
+                        }
+                    } else if (testElapsed < settlingDuration) {
+                        console.log(`Download ping ${sequence} (settling): ${latency}ms`);
+                    }
+                } else {
+                    console.warn(`Download ping ${sequence} failed: ${response.status}`);
+                }
+            } catch (error) {
+                console.warn(`Download ping ${sequence} error:`, error.message);
+            }
+        }
+        
+        // Start multiple download streams to saturate the connection
+        for (let streamId = 0; streamId < streamsCount; streamId++) {
+            const streamInterval = setInterval(async () => {
+                const elapsed = Date.now() - startTime;
+                
+                if (elapsed > totalDuration) {
+                    clearInterval(streamInterval);
+                    return;
+                }
+                
+                try {
+                    // Generate download load with abort controller
+                    const controller = new AbortController();
+                    const chunkSize = chunkSizeKB * 1024;
+                    
+                    fetch(`/api/download/${chunkSize}`, {
+                        signal: controller.signal
+                    }).then(response => {
+                        return response.arrayBuffer();
+                    }).catch(() => {
+                        // Expected to be aborted or fail under load
+                    });
+                    
+                    // Abort after a short time to keep generating new requests
+                    const abortDelay = isLocalhost ? 150 : 100;
+                    setTimeout(() => controller.abort(), abortDelay);
+                    
+                } catch (e) {
+                    console.log('Download load generation error (expected):', e.message);
+                }
+            }, loadIntervalMs);
+            
+            downloadStreams.push(streamInterval);
+        }
+        
+        // Start periodic latency measurements
+        pingInterval = setInterval(() => {
+            const elapsed = Date.now() - startTime;
+            
+            if (elapsed > totalDuration) {
+                return;
+            }
+            
+            const sequence = packetCount++;
+            measureHttpLatency(sequence);
+            
+        }, 200); // Ping every 200ms for good jitter measurement
+        
+        // Cleanup and resolution
+        setTimeout(() => {
+            // Clean up all intervals
+            downloadStreams.forEach(interval => clearInterval(interval));
+            if (pingInterval) clearInterval(pingInterval);
+            if (progressInterval) clearInterval(progressInterval);
+            if (statusInterval) clearInterval(statusInterval);
+            
+            console.log('Download bufferbloat test completed');
+            console.log('Total download latency measurements:', latencies.length);
+            
+            if (latencies.length < 3) {
+                console.error('Insufficient download latency measurements:', latencies.length);
+                resolve({
+                    avgLatency: latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 100,
+                    pingCount: latencies.length,
+                    jitter: latencies.length > 1 ? calculateJitter(latencies) : 0,
+                    dataQuality: 'insufficient'
+                });
+                return;
+            }
+            
+            const avgLatency = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+            const jitter = calculateJitter(latencies);
+            
+            // Set data quality based on sample count (aligned with grading thresholds)
+            let dataQuality = 'failed';
+            if (latencies.length >= 15) {
+                dataQuality = 'good';
+            } else if (latencies.length >= 10) {
+                dataQuality = 'limited';
+            } else if (latencies.length >= 3) {
+                dataQuality = 'insufficient';
+            }
+            
+            console.log(`Download results - Avg Latency: ${avgLatency.toFixed(1)}ms, Samples: ${latencies.length}, Jitter: ${jitter.toFixed(1)}ms, Quality: ${dataQuality}`);
+            
+            resolve({
+                avgLatency: Number(avgLatency) || 0,
+                pingCount: latencies.length,
+                jitter: Number(jitter) || 0,
+                dataQuality: dataQuality
+            });
+            
+        }, totalDuration + 2000);
+    });
+}
+
+        async function runLoadTest(targetSpeedMbps) {
+            return new Promise((resolve) => {
+                const latencies = [];
+                let packetCount = 0;
+                const testDuration = 10000; // 10 seconds
+                const startTime = Date.now();
+                let loadInterval;
+                let pingInterval;
+                let progressInterval;
+                let statusInterval;
+                
+                updateStatus('Running load test with latency measurement...');
+                console.log('Starting load test');
+                
+                const chunkSizeKB = 50;
+                const chunksPerSecond = (targetSpeedMbps * 1024) / (chunkSizeKB * 8);
+                const loadIntervalMs = Math.max(10, 1000 / chunksPerSecond);
+                
+                console.log(`Load test config: ${targetSpeedMbps} Mbps target, ${chunkSizeKB}KB chunks, ${chunksPerSecond.toFixed(1)} chunks/sec, ${loadIntervalMs.toFixed(1)}ms interval`);
+                
+                // Update progress during load test
+                progressInterval = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    const progressPercent = Math.min(elapsed / testDuration, 1);
+                    const currentProgress = 60 + (progressPercent * 25); // 60% to 85%
+                    updateProgress(currentProgress, `Running load test... ${(progressPercent * 100).toFixed(0)}%`);
+                }, 250);
+                
+                // Update status with jitter monitoring info
+                statusInterval = setInterval(() => {
+                    const elapsed = Date.now() - startTime;
+                    const secondsRemaining = Math.max(0, Math.ceil((testDuration - elapsed) / 1000));
+                    const currentJitter = latencies.length > 1 ? calculateJitter(latencies) : 0;
+                    const recentLatency = latencies.length > 0 ? latencies[latencies.length - 1] : 0;
+                    updateStatus(`Load test: ${secondsRemaining}s remaining, latest latency: ${recentLatency.toFixed(1)}ms, jitter: ${currentJitter.toFixed(1)}ms`);
+                }, 1000);
+                
+                // Clear any existing listeners
+                socket.off('pong');
+                
+                socket.on('pong', (data) => {
+                    if (data.testType === 'load') {
+                        const now = Date.now();
+                        const latency = now - data.clientTimestamp;
+                        
+                        // Sanity check: reject obviously wrong measurements
+                        if (latency > 0 && latency < 30000) { // Reject negative or >30 second latencies
+                            latencies.push(latency);
+                            
+                            // Log jitter updates for visibility
+                            if (latencies.length > 1 && data.sequence % 4 === 0) { // Every 4th packet
+                                const currentJitter = calculateJitter(latencies);
+                                console.log(`Load ping ${data.sequence}: ${latency}ms, jitter: ${currentJitter.toFixed(1)}ms`);
+                            } else {
+                                console.log(`Load ping ${data.sequence}: ${latency}ms`);
+                            }
+                        } else {
+                            console.warn(`Rejected invalid latency measurement: ${latency}ms`);
+                        }
+                    }
+                });
+                
+                loadInterval = setInterval(async () => {
+                    if (Date.now() - startTime > testDuration) {
+                        clearInterval(loadInterval);
+                        clearInterval(pingInterval);
+                        clearInterval(progressInterval);
+                        clearInterval(statusInterval);
+                        
+                        socket.off('pong');
+                        
+                        console.log('Load test completed');
+                        console.log('Total ping measurements:', latencies.length);
+                        console.log('Latencies:', latencies.map(l => l.toFixed(1)).join(', '));
+                        
+                        if (latencies.length === 0) {
+                            console.error('No valid latency measurements received');
+                            resolve({
+                                avgLatency: 100,
+                                pingCount: 0,
+                                jitter: 0
+                            });
+                            return;
+                        }
+                        
+                        const avgLatency = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+                        const jitter = calculateJitter(latencies);
+                        
+                        console.log(`Final measurements - Avg Latency: ${safeToFixed(avgLatency)}ms, Ping Count: ${latencies.length}, Jitter: ${safeToFixed(jitter)}ms`);
+                        
+                        resolve({
+                            avgLatency: Number(avgLatency) || 0,
+                            pingCount: latencies.length,
+                            jitter: Number(jitter) || 0
+                        });
+                        return;
+                    }
+                    
+                    try {
+                        const loadData = new ArrayBuffer(chunkSizeKB * 1024);
+                        
+                        fetch('/api/load-chunk', {
+                            method: 'POST',
+                            body: loadData,
+                            headers: {
+                                'Content-Type': 'application/octet-stream'
+                            }
+                        }).catch(() => {});
+                        
+                    } catch (e) {
+                        console.log('Load generation error (expected):', e.message);
+                    }
+                }, loadIntervalMs);
+                
+                pingInterval = setInterval(() => {
+                    if (Date.now() - startTime > testDuration) {
+                        return;
+                    }
+                    
+                    const sequence = packetCount++;
+                    
+                    const pingData = {
+                        testType: 'load',
+                        clientTimestamp: Date.now(),
+                        sequence: sequence
+                    };
+                    
+                    socket.emit('ping', pingData);
+                }, 250); // Send ping every 250ms for jitter measurement
+                
+                setTimeout(() => {
+                    if (loadInterval) clearInterval(loadInterval);
+                    if (pingInterval) clearInterval(pingInterval);
+                    if (progressInterval) clearInterval(progressInterval);
+                    if (statusInterval) clearInterval(statusInterval);
+                    socket.off('pong');
+                    
+                    if (latencies.length === 0) {
+                        console.error('No load test responses received - timeout fallback');
+                        resolve({
+                            avgLatency: 100,
+                            pingCount: 0,
+                            jitter: 0
+                        });
+                    }
+                }, testDuration + 5000);
+            });
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
